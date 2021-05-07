@@ -40,6 +40,8 @@ typedef float real;                    // Precision of float numbers
  * Properties:
  *   cn - The word frequency (number of times it appears).
  *   word - The actual string word.
+ *   point - The path indices from root to a word leaf.
+ *   code - huffman encoded code for a word, e.g. 0101110. 
  */
 struct vocab_word {
   long long cn;
@@ -414,11 +416,14 @@ void SortVocab() {
 void ReduceVocab() {
   int a, b = 0;
   unsigned int hash;
-  for (a = 0; a < vocab_size; a++) if (vocab[a].cn > min_reduce) {
-    vocab[b].cn = vocab[a].cn;
-    vocab[b].word = vocab[a].word;
-    b++;
-  } else free(vocab[a].word);
+  for (a = 0; a < vocab_size; a++)
+    if (vocab[a].cn > min_reduce) {
+      vocab[b].cn = vocab[a].cn;
+      vocab[b].word = vocab[a].word;
+      b++;
+    } else {
+      free(vocab[a].word);
+    }
   vocab_size = b;
   for (a = 0; a < vocab_hash_size; a++) vocab_hash[a] = -1;
   for (a = 0; a < vocab_size; a++) {
@@ -584,13 +589,15 @@ void CreateBinaryTree() {
     
     // Record the code length (the length of the `point` list).
     vocab[a].codelen = i;
-    
-    // The root node is at row `vocab_size - 2` of the output matrix. 
+
+    // Point[0] stores the root node of the path and the root node of
+    // the huffman tree is at index `vocab_size - 2` of the output matrix.
     vocab[a].point[0] = vocab_size - 2;
     
     // For each bit in this word's code...
     for (b = 0; b < i; b++) {
-      // Reverse the code in `code` and store it in `vocab[a].code`
+      // The binary in array code is in reverse order, that is from leaf to root.
+      // It is reversed here, results code is from root to leaf.
       vocab[a].code[i - b - 1] = code[b];
       
       // Store the row indeces of the internal nodes leading to this word.
